@@ -3,6 +3,15 @@
 
 #include "framework.h"
 #include "Paint.h"
+#include <random>
+
+#define HEIGHT      1080
+#define WIDTH       1280
+
+BITMAPINFO          bmpInfo;
+LPDWORD             lpPixel;
+HBITMAP             hBitmap;
+HDC                 hMemDC;
 
 #define MAX_LOADSTRING 100
 
@@ -10,6 +19,8 @@
 HINSTANCE hInst;                                // 현재 인스턴스입니다.
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
+
+int g_mouseX, g_mouseY;
 
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -56,12 +67,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 }
 
 
-
-//
-//  함수: MyRegisterClass()
-//
-//  용도: 창 클래스를 등록합니다.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -83,16 +88,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-//
-//   함수: InitInstance(HINSTANCE, int)
-//
-//   용도: 인스턴스 핸들을 저장하고 주 창을 만듭니다.
-//
-//   주석:
-//
-//        이 함수를 통해 인스턴스 핸들을 전역 변수에 저장하고
-//        주 프로그램 창을 만든 다음 표시합니다.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
@@ -111,46 +106,124 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  함수: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  용도: 주 창의 메시지를 처리합니다.
-//
-//  WM_COMMAND  - 애플리케이션 메뉴를 처리합니다.
-//  WM_PAINT    - 주 창을 그립니다.
-//  WM_DESTROY  - 종료 메시지를 게시하고 반환합니다.
-//
-//
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+
+void SetDib(HWND hWnd)
 {
-    switch (message)
+    bmpInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmpInfo.bmiHeader.biWidth = WIDTH;
+    bmpInfo.bmiHeader.biHeight = HEIGHT;
+
+    bmpInfo.bmiHeader.biPlanes = 1;
+    bmpInfo.bmiHeader.biBitCount = 32;
+    bmpInfo.bmiHeader.biCompression = BI_RGB;
+
+    HDC hdc = GetDC(hWnd);
+    hBitmap = CreateDIBSection(hdc, &bmpInfo, DIB_RGB_COLORS, (void**)&lpPixel, NULL, 0);
+    //   bmpInfo + pixel data ( width * height * bitCount / 8  )
+    //   0, 0 위치  왼쪽 하단
+
+    hMemDC = CreateCompatibleDC(hdc);
+    SelectObject(hMemDC, hBitmap);
+    ReleaseDC(hWnd, hdc);
+}
+
+void DestroyDib()
+{
+    DeleteDC(hMemDC);
+    DeleteObject(hBitmap);
+}
+
+void DrawDib()
+{
+    for (int y = HEIGHT - 1; y >= 0; y--)
     {
-    case WM_COMMAND:
+        for (int x = 0; x < WIDTH; x++)
         {
-            int wmId = LOWORD(wParam);
-            // 메뉴 선택을 구문 분석합니다:
-            switch (wmId)
+            if (x == g_mouseX && y == HEIGHT - g_mouseY)
             {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
+                lpPixel[(y * WIDTH) - (WIDTH*2) + x] = 0x00ff0000;
+
+                lpPixel[(y * WIDTH) - WIDTH + x - 1] = 0x00ff0000;
+                lpPixel[(y * WIDTH) - WIDTH + x] = 0x00ff0000;
+                lpPixel[(y * WIDTH) - WIDTH + x + 1] = 0x00ff0000;
+
+                lpPixel[(y * WIDTH) + x - 2] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + x - 1] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + x] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + x + 1] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + x + 2] = 0x00ff0000;
+
+                lpPixel[(y * WIDTH) + WIDTH + x - 1] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + WIDTH + x] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + WIDTH + x + 1] = 0x00ff0000;
+                
+                lpPixel[(y * WIDTH) + (WIDTH * 2) + x] = 0x00ff0000;
             }
         }
+    }
+}
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    PAINTSTRUCT ps;
+    HDC hdc;
+    static bool drawing = false;
+
+    switch (message)
+    {
+    case WM_CREATE:
+        SetDib(hWnd);
         break;
-    case WM_PAINT:
+
+    case WM_LBUTTONDOWN:
+        drawing = true;
+        g_mouseX = LOWORD(lParam);
+        g_mouseY = HIWORD(lParam);
+        DrawDib();
+        InvalidateRgn(hWnd, NULL, FALSE);
+        break;
+
+    case WM_MOUSEMOVE:
+        if (drawing)
         {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
-            EndPaint(hWnd, &ps);
+            g_mouseX = LOWORD(lParam);
+            g_mouseY = HIWORD(lParam);
+            DrawDib();
+            InvalidateRgn(hWnd, NULL, FALSE);
         }
         break;
+
+    case WM_LBUTTONUP:
+        drawing = false;
+        break;
+
+    case WM_COMMAND:
+    {
+        int wmId = LOWORD(wParam);
+        switch (wmId)
+        {
+        case IDM_ABOUT:
+            DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+            break;
+        case IDM_EXIT:
+            DestroyWindow(hWnd);
+            break;
+        default:
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        }
+    }
+    break;
+    case WM_PAINT:
+    {
+        hdc = BeginPaint(hWnd, &ps);
+        BitBlt(hdc, 0, 0, WIDTH, HEIGHT, hMemDC, 0, 0, SRCCOPY);
+
+        EndPaint(hWnd, &ps);
+    }
+    break;
     case WM_DESTROY:
+        DestroyDib();
+        KillTimer(hWnd, 1);
         PostQuitMessage(0);
         break;
     default:
