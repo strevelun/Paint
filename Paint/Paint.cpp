@@ -8,6 +8,18 @@
 #define HEIGHT      1080
 #define WIDTH       1280
 
+enum Color
+{
+    RED = 0x00ff0000,
+    ORANGE = 0x00FFA500,
+    YELLOW = 0x00ffff00,
+    GREEN = 0x0000FF00,
+    BLUE = 0x000000FF,
+    NAVY = 0x00000080,
+    PURPLE = 0x00800080,
+};
+int g_color = RED;
+
 BITMAPINFO          bmpInfo;
 LPDWORD             lpPixel;
 HBITMAP             hBitmap;
@@ -141,23 +153,23 @@ void DrawDib()
         {
             if (x == g_mouseX && y == HEIGHT - g_mouseY)
             {
-                lpPixel[(y * WIDTH) - (WIDTH*2) + x] = 0x00ff0000;
+                lpPixel[(y * WIDTH) - (WIDTH*2) + x] = g_color;
 
-                lpPixel[(y * WIDTH) - WIDTH + x - 1] = 0x00ff0000;
-                lpPixel[(y * WIDTH) - WIDTH + x] = 0x00ff0000;
-                lpPixel[(y * WIDTH) - WIDTH + x + 1] = 0x00ff0000;
+                lpPixel[(y * WIDTH) - WIDTH + x - 1] = g_color;
+                lpPixel[(y * WIDTH) - WIDTH + x] = g_color;
+                lpPixel[(y * WIDTH) - WIDTH + x + 1] = g_color;
 
-                lpPixel[(y * WIDTH) + x - 2] = 0x00ff0000;
-                lpPixel[(y * WIDTH) + x - 1] = 0x00ff0000;
-                lpPixel[(y * WIDTH) + x] = 0x00ff0000;
-                lpPixel[(y * WIDTH) + x + 1] = 0x00ff0000;
-                lpPixel[(y * WIDTH) + x + 2] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + x - 2] = g_color;
+                lpPixel[(y * WIDTH) + x - 1] = g_color;
+                lpPixel[(y * WIDTH) + x] = g_color;
+                lpPixel[(y * WIDTH) + x + 1] = g_color;
+                lpPixel[(y * WIDTH) + x + 2] = g_color;
 
-                lpPixel[(y * WIDTH) + WIDTH + x - 1] = 0x00ff0000;
-                lpPixel[(y * WIDTH) + WIDTH + x] = 0x00ff0000;
-                lpPixel[(y * WIDTH) + WIDTH + x + 1] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + WIDTH + x - 1] = g_color;
+                lpPixel[(y * WIDTH) + WIDTH + x] = g_color;
+                lpPixel[(y * WIDTH) + WIDTH + x + 1] = g_color;
                 
-                lpPixel[(y * WIDTH) + (WIDTH * 2) + x] = 0x00ff0000;
+                lpPixel[(y * WIDTH) + (WIDTH * 2) + x] = g_color;
             }
         }
     }
@@ -191,6 +203,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             DrawDib();
             InvalidateRgn(hWnd, NULL, FALSE);
         }
+        break;
+
+    case WM_KEYDOWN:
+        if (wParam == '1')
+            g_color = RED;
+        else if (wParam == '2')
+            g_color = ORANGE;
+        else if (wParam == '3')
+            g_color = YELLOW;
+        else if (wParam == '4')
+            g_color = GREEN;
+        else if (wParam == '5')
+            g_color = BLUE;
+        else if (wParam == '6')
+            g_color = NAVY;
+        else if (wParam == '7')
+            g_color = PURPLE;
         break;
 
     case WM_LBUTTONUP:
